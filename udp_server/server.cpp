@@ -67,9 +67,9 @@ int main()
 		}
 
 		//print details of the client/peer and the data received
-		const char buf[256] = { 0 };
-		PCSTR retv = inet_ntop(AF_INET, &si_other.sin_addr, (PSTR)buf, 256);
-		printf("Received packet from %s:%d\n", buf, ntohs(si_other.sin_port));
+		const char inet_addr_buf[256] = { 0 };
+		PCSTR retv = inet_ntop(AF_INET, &si_other.sin_addr, (PSTR)inet_addr_buf, 256);
+		printf("Received packet from %s:%d\n", inet_addr_buf, ntohs(si_other.sin_port));
 		printf("Data: %s\n", buf);
 
 		//now reply the client with the same data
