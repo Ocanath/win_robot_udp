@@ -10,7 +10,7 @@
 
 #include <iostream>
 
-#define SERVER "127.0.0.1"	//ip address of udp server
+#define SERVER "192.168.29.220"	//ip address of udp server
 #define BUFLEN 512	//Max length of buffer
 #define PORT 10103	//The port on which to listen for incoming data
 

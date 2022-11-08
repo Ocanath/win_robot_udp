@@ -1,6 +1,7 @@
 /*
 	Simple UDP Server
 */
+#define _WINSOCK_DEPRECATED_NO_WARNINGS
 
 #include<stdio.h>
 #include<winsock2.h>
@@ -36,10 +37,10 @@ int main()
 		printf("Could not create socket : %d", WSAGetLastError());
 	}
 	printf("Socket created.\n");
-
+	
 	//Prepare the sockaddr_in structure
 	server.sin_family = AF_INET;
-	server.sin_addr.s_addr = INADDR_ANY;
+	server.sin_addr.s_addr = inet_addr("192.168.29.220");
 	server.sin_port = htons(PORT);
 
 	//Bind
@@ -63,7 +64,7 @@ int main()
 		if ((recv_len = recvfrom(s, buf, BUFLEN, 0, (struct sockaddr*)&si_other, &slen)) == SOCKET_ERROR)
 		{
 			printf("recvfrom() failed with error code : %d", WSAGetLastError());
-			exit(EXIT_FAILURE);
+			//exit(EXIT_FAILURE);
 		}
 
 		//print details of the client/peer and the data received
@@ -76,7 +77,7 @@ int main()
 		if (sendto(s, buf, recv_len, 0, (struct sockaddr*)&si_other, slen) == SOCKET_ERROR)
 		{
 			printf("sendto() failed with error code : %d", WSAGetLastError());
-			exit(EXIT_FAILURE);
+			//exit(EXIT_FAILURE);
 		}
 	}
 
