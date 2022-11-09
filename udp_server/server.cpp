@@ -91,8 +91,8 @@ int main()
 	//keep listening for data
 	while (1)
 	{
-		printf("Waiting for data...");
-		fflush(stdout);
+		//printf("Waiting for data...");
+		//fflush(stdout);
 
 		//clear the buffer by filling null, it might have previously received data
 		memset(r_buf, '\0', BUFLEN);
@@ -107,8 +107,8 @@ int main()
 		//print details of the client/peer and the data received
 		
 		PCSTR retv = inet_ntop(AF_INET, &si_other.sin_addr, (PSTR)inet_addr_buf, 256);
-		printf("Received packet from %s:%d\n", inet_addr_buf, ntohs(si_other.sin_port));
-		printf("Data: %s\n", r_buf);
+		//printf("Received packet from %s:%d\n", inet_addr_buf, ntohs(si_other.sin_port));
+		//printf("Data: %s\n", r_buf);
 
 
 		memset(t_buf, '\0', BUFLEN);
