@@ -82,7 +82,7 @@ int main(void)
 	//start communication
 	u32_fmt_t farr[40] = { 0 };
 	SYSTEMTIME st;
-
+	uint32_t fail_count = 0;
 	while (1)
 	{
 		GetSystemTime(&st);
@@ -122,12 +122,13 @@ int main(void)
 		//try to receive some data, this is a blocking call
 		if (recvfrom(s, buf, BUFLEN, 0, (struct sockaddr*)&si_other, &slen) == SOCKET_ERROR)
 		{
-			printf("recvfrom() failed with error code : %d", WSAGetLastError());
+			printf("recvfrom() failed with error code : %d. Failcount: %d\r\n", WSAGetLastError(), fail_count);
+			fail_count++;
 			//exit(EXIT_FAILURE);
 		}
 
-		inet_ntop(AF_INET, &si_other.sin_addr.S_un.S_addr, (PSTR)inet_addr_buf, 256);	//convert again the value we copied thru and display
-		printf("reply received from address: %s: %s\r\n", inet_addr_buf, buf);
+		//inet_ntop(AF_INET, &si_other.sin_addr.S_un.S_addr, (PSTR)inet_addr_buf, 256);	//convert again the value we copied thru and display
+		//printf("reply received from address: %s: %s\r\n", inet_addr_buf, buf);
 
 		//puts(buf);
 	}
