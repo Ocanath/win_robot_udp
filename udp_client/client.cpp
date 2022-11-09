@@ -90,7 +90,10 @@ int main(void)
 			exit(EXIT_FAILURE);
 		}
 
-		puts(buf);
+		inet_ntop(AF_INET, &si_other.sin_addr.S_un.S_addr, (PSTR)inet_addr_buf, 256);	//convert again the value we copied thru and display
+		printf("reply received from address: %s: %s\r\n", inet_addr_buf, buf);
+
+		//puts(buf);
 	}
 
 	closesocket(s);

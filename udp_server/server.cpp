@@ -13,6 +13,25 @@
 #define BUFLEN 512	//Max length of buffer
 #define PORT 10103	//The port on which to listen for incoming data
 
+
+/*
+To review my knowledge:
+A UDP server is a socket which is bound to an address and port.
+A single address can have multiple ports.
+There are special addresses on a given network which can be used for different things.
+
+For instance, if you bind the server to address in4addr_any, it means that messages directed EITHER
+to the IP of the host or broadcasted to the entire network (there's a special address for that too)
+will make it to the server, as long as it's on the right port #.
+
+The server can tell who it received a packet from, and direct out a response to the sender specifically.
+multiple servers can use the same port, but they'll receive traffic to that port if they're on the ANY ip address.
+
+it's totally possible for a UDP server to get flooded with bogus packets from a malicious sender!
+
+also looks like you need to allow the UDP server on the windows firewall or it'll get squished by default.
+*/
+
 int main()
 {
 	SOCKET s;
