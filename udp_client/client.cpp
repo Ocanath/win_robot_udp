@@ -10,7 +10,6 @@
 
 #include <iostream>
 
-#define SERVER "192.168.29.220"	//ip address of udp server
 #define BUFLEN 512	//Max length of buffer
 #define PORT 10103	//The port on which to listen for incoming data
 
@@ -38,11 +37,27 @@ int main(void)
 		exit(EXIT_FAILURE);
 	}
 
+	/*Obtain (a) host ip and display it to the console*/
+	char namebuf[256] = { 0 };
+	const char inet_addr_buf[256] = { 0 };
+	int rc = gethostname(namebuf, 256);
+	printf("hostname: %s\r\n", namebuf);
+	hostent* phost = gethostbyname(namebuf);
+	for (int i = 0; phost->h_addr_list[i] != NULL; i++)
+	{
+		PCSTR retv = inet_ntop(AF_INET, phost->h_addr_list[i], (PSTR)inet_addr_buf, 256);
+		printf("Host has IP address %d: %s\r\n", i, inet_addr_buf);
+	}
+
 	//setup address structure
 	memset((char*)&si_other, 0, sizeof(si_other));
 	si_other.sin_family = AF_INET;
 	si_other.sin_port = htons(PORT);
-	si_other.sin_addr.S_un.S_addr = inet_addr(SERVER);
+	si_other.sin_addr.S_un.S_addr = inet_addr(inet_addr_buf); //assign the client the last IP address in the IPV4 list provided by the host name address list lookup. 
+
+	inet_ntop(AF_INET, &si_other.sin_addr.S_un.S_addr, (PSTR)inet_addr_buf, 256);	//convert again the value we copied thru and display
+	printf("Targeting address: %s on port %d\r\n", inet_addr_buf, PORT);
+
 
 	//start communication
 	while (1)
