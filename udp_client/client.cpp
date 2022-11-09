@@ -53,7 +53,8 @@ int main(void)
 	memset((char*)&si_other, 0, sizeof(si_other));
 	si_other.sin_family = AF_INET;
 	si_other.sin_port = htons(PORT);
-	si_other.sin_addr.S_un.S_addr = inet_addr(inet_addr_buf); //assign the client the last IP address in the IPV4 list provided by the host name address list lookup. 
+	//si_other.sin_addr.S_un.S_addr = inet_addr(inet_addr_buf); //assign the client the last IP address in the IPV4 list provided by the host name address list lookup. 
+	si_other.sin_addr.S_un.S_addr = inet_addr("192.168.29.255");
 
 	inet_ntop(AF_INET, &si_other.sin_addr.S_un.S_addr, (PSTR)inet_addr_buf, 256);	//convert again the value we copied thru and display
 	printf("Targeting address: %s on port %d\r\n", inet_addr_buf, PORT);
@@ -65,13 +66,19 @@ int main(void)
 		printf("Enter message : ");
 		//gets(message);
 		std::cin >> message;
-		printf("Sending: %s\r\n", message);
+
+		inet_ntop(AF_INET, &si_other.sin_addr.S_un.S_addr, (PSTR)inet_addr_buf, 256);	//convert again the value we copied thru and display
+		printf("Sending payload to target address: %s on port %d\r\n", inet_addr_buf, PORT);
+
 		//send the message
 		if (sendto(s, message, strlen(message), 0, (struct sockaddr*)&si_other, slen) == SOCKET_ERROR)
 		{
 			printf("sendto() failed with error code : %d", WSAGetLastError());
 			exit(EXIT_FAILURE);
 		}
+
+		inet_ntop(AF_INET, &si_other.sin_addr.S_un.S_addr, (PSTR)inet_addr_buf, 256);	//convert again the value we copied thru and display
+		printf("Preparing to read from: %s on port %d\r\n", inet_addr_buf, PORT);
 
 		//receive a reply and print it
 		//clear the buffer by filling null, it might have previously received data
