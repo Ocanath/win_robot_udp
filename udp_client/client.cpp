@@ -83,54 +83,42 @@ int main(void)
 	u32_fmt_t farr[40] = { 0 };
 	SYSTEMTIME st;
 	uint32_t fail_count = 0;
+
+	uint64_t start_tick_64 = GetTickCount64();
+	uint64_t report_ts = 0;
 	while (1)
 	{
-		GetSystemTime(&st);
-		float t = wrap_2pi( ((float)st.wMilliseconds) / 1000.f + ((float)st.wSecond) );
+		uint64_t tick = GetTickCount64() - start_tick_64;
+		float t = (float)tick * .001f;
+
+		/*create a payload*/
 		for (int i = 0; i < 6; i++)
 		{
-			farr[i].f32 = sin_fast(t + (float)i / TWO_PI);
+			farr[i].f32 = sin_fast(wrap_2pi(t) + (float)i / TWO_PI);	//for later
 		}
-		sprintf(t_buf, "%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\r\n",
-			farr[0].f32,
-			farr[1].f32,
-			farr[2].f32,
-			farr[3].f32,
-			farr[4].f32,
-			farr[5].f32
-			);
-		//printf("Enter t_buf : ");
-		//gets(t_buf);
-		//std::cin >> t_buf;
+		sprintf(t_buf, "client uptime: %f\r\n", t);
 
-		//inet_ntop(AF_INET, &si_other.sin_addr.S_un.S_addr, (PSTR)inet_addr_buf, 256);	//convert again the value we copied thru and display
-		//printf("Sending payload to target address: %s on port %d\r\n", inet_addr_buf, PORT);
 
-		//send the t_buf
-		if (sendto(s, t_buf, strlen(t_buf), 0, (struct sockaddr*)&si_other, slen) == SOCKET_ERROR)
+		if(tick > report_ts)
 		{
-			printf("sendto() failed with error code : %d", WSAGetLastError());
-			exit(EXIT_FAILURE);
+			report_ts = tick + 20;	//send udp packet once every 50 milliseconds (or so)
+			//send the t_buf
+			if (sendto(s, t_buf, strlen(t_buf), 0, (struct sockaddr*)&si_other, slen) == SOCKET_ERROR)
+			{
+				printf("sendto() failed with error code : %d", WSAGetLastError());
+				exit(EXIT_FAILURE);
+			}
+
+			//clear the buffer by filling null, it might have previously received data
+			memset(buf, '\0', BUFLEN);
+			//try to receive some data, this is a blocking call
+			if (recvfrom(s, buf, BUFLEN, 0, (struct sockaddr*)&si_other, &slen) == SOCKET_ERROR)
+			{
+				printf("recvfrom() failed with error code : %d. Failcount: %d\r\n", WSAGetLastError(), fail_count);
+				fail_count++;
+				//exit(EXIT_FAILURE);
+			}
 		}
-
-		//inet_ntop(AF_INET, &si_other.sin_addr.S_un.S_addr, (PSTR)inet_addr_buf, 256);	//convert again the value we copied thru and display
-		//printf("Preparing to read from: %s on port %d\r\n", inet_addr_buf, PORT);
-
-		//receive a reply and print it
-		//clear the buffer by filling null, it might have previously received data
-		memset(buf, '\0', BUFLEN);
-		//try to receive some data, this is a blocking call
-		if (recvfrom(s, buf, BUFLEN, 0, (struct sockaddr*)&si_other, &slen) == SOCKET_ERROR)
-		{
-			printf("recvfrom() failed with error code : %d. Failcount: %d\r\n", WSAGetLastError(), fail_count);
-			fail_count++;
-			//exit(EXIT_FAILURE);
-		}
-
-		//inet_ntop(AF_INET, &si_other.sin_addr.S_un.S_addr, (PSTR)inet_addr_buf, 256);	//convert again the value we copied thru and display
-		//printf("reply received from address: %s: %s\r\n", inet_addr_buf, buf);
-
-		//puts(buf);
 	}
 
 	closesocket(s);

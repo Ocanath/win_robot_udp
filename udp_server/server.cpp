@@ -32,8 +32,37 @@ it's totally possible for a UDP server to get flooded with bogus packets from a 
 also looks like you need to allow the UDP server on the windows firewall or it'll get squished by default.
 */
 
+int connect_to_usb_serial(HANDLE * serial_handle, const char * com_port_name, unsigned long baud)
+{
+	/*First, connect to com port.
+	TODO: add a method that scans  this and filters based on the device descriptor.
+	*/
+	(*serial_handle) = CreateFileA(com_port_name, GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+	DCB serial_params = { 0 };
+	serial_params.DCBlength = sizeof(serial_params);
+	serial_params.BaudRate = baud;
+	serial_params.ByteSize = DATABITS_8;
+	serial_params.StopBits = ONESTOPBIT;
+	serial_params.Parity = PARITY_NONE;
+	if (!SetCommState( (*serial_handle), &serial_params))
+	{
+		return 1;	//fail
+	}
+	else
+	{
+		return 0;	//success
+	}
+}
+
 int main()
 {
+	HANDLE usb_serial_port;
+	if (connect_to_usb_serial(&usb_serial_port, "\\\\.\\COM4", 460800) == 0)
+		printf("found com port success\r\n");
+	else
+		printf("failed to find com port\r\n");
+
+
 	SOCKET s;
 	struct sockaddr_in server, si_other;
 	int slen, recv_len;
@@ -104,9 +133,15 @@ int main()
 			//exit(EXIT_FAILURE);
 		}
 
-		//print details of the client/peer and the data received
+		//forward the shit over usb serial
+		DWORD dwbyteswritten;
+		int uart_write_len = recv_len;
+		if (uart_write_len > BUFLEN)
+			uart_write_len = BUFLEN;
+		WriteFile(usb_serial_port, r_buf, uart_write_len, &dwbyteswritten, NULL);
 		
-		PCSTR retv = inet_ntop(AF_INET, &si_other.sin_addr, (PSTR)inet_addr_buf, 256);
+		
+		//PCSTR retv = inet_ntop(AF_INET, &si_other.sin_addr, (PSTR)inet_addr_buf, 256);
 		//printf("Received packet from %s:%d\n", inet_addr_buf, ntohs(si_other.sin_port));
 		//printf("Data: %s\n", r_buf);
 
