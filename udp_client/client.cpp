@@ -14,7 +14,7 @@
 #include <iostream>
 
 #define BUFLEN 512	//Max length of buffer
-#define PORT 10103	//The port on which to listen for incoming data
+#define PORT 3425	//The port on which to listen for incoming data
 
 typedef union u32_fmt_t
 {
@@ -52,7 +52,7 @@ int main(void)
 	}
 	/*set timeout*/
 	struct timeval read_timeout;
-	read_timeout.tv_sec = 1;
+	read_timeout.tv_sec = 3;
 	setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, (const char *)(&read_timeout), sizeof(read_timeout));
 
 
@@ -86,39 +86,45 @@ int main(void)
 
 	uint64_t start_tick_64 = GetTickCount64();
 	uint64_t report_ts = 0;
-	while (1)
+
+	LARGE_INTEGER qpf_freq;
+	QueryPerformanceFrequency(&qpf_freq);
+	while(1)
 	{
-		uint64_t tick = GetTickCount64() - start_tick_64;
-		float t = (float)tick * .001f;
+		std::string console_input;
+		std::cin >> console_input;
+		//printf("%s\r\n", console_input.data());
 
-		/*create a payload*/
-		for (int i = 0; i < 6; i++)
+		LARGE_INTEGER start_count;
+		QueryPerformanceCounter(&start_count);
+		//uint64_t start_tick = GetTickCount64();
+		sprintf(t_buf, "du motherfucking hast meichgsl\r\n");
+		if (sendto(s, t_buf, strlen(t_buf), 0, (struct sockaddr*)&si_other, slen) == SOCKET_ERROR)
 		{
-			farr[i].f32 = sin_fast(wrap_2pi(t) + (float)i / TWO_PI);	//for later
+			printf("sendto() failed with error code : %d", WSAGetLastError());
+			exit(EXIT_FAILURE);
 		}
-		sprintf(t_buf, "client uptime: %f\r\n", t);
 
-
-		if(tick > report_ts)
+		//clear the buffer by filling null, it might have previously received data
+		memset(buf, '\0', BUFLEN);
+		//try to receive some data, this is a blocking call
+		if (recvfrom(s, buf, BUFLEN, 0, (struct sockaddr*)&si_other, &slen) == SOCKET_ERROR)
 		{
-			report_ts = tick + 20;	//send udp packet once every 50 milliseconds (or so)
-			//send the t_buf
-			if (sendto(s, t_buf, strlen(t_buf), 0, (struct sockaddr*)&si_other, slen) == SOCKET_ERROR)
-			{
-				printf("sendto() failed with error code : %d", WSAGetLastError());
-				exit(EXIT_FAILURE);
-			}
-
-			//clear the buffer by filling null, it might have previously received data
-			memset(buf, '\0', BUFLEN);
-			//try to receive some data, this is a blocking call
-			if (recvfrom(s, buf, BUFLEN, 0, (struct sockaddr*)&si_other, &slen) == SOCKET_ERROR)
-			{
-				printf("recvfrom() failed with error code : %d. Failcount: %d\r\n", WSAGetLastError(), fail_count);
-				fail_count++;
-				//exit(EXIT_FAILURE);
-			}
+			printf("recvfrom() failed with error code : %d. Failcount: %d\r\n", WSAGetLastError(), fail_count);
+			fail_count++;
+			//exit(EXIT_FAILURE);
 		}
+		else
+		{
+			printf("%s\r\n", buf);
+		}
+		LARGE_INTEGER end_count;
+		QueryPerformanceCounter(&end_count);
+		LARGE_INTEGER elapsed_us;
+		elapsed_us.QuadPart = end_count.QuadPart - start_count.QuadPart;
+		elapsed_us.QuadPart *= 1000000;
+		elapsed_us.QuadPart /= qpf_freq.QuadPart;
+		printf("round trip time: ticks: %d, microseconds: %d\r\n", (int)(end_count.QuadPart - start_count.QuadPart), (int)(elapsed_us.QuadPart) );
 	}
 
 	closesocket(s);
