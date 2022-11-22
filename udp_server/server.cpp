@@ -8,6 +8,7 @@
 #include<winsock2.h>
 #include <WS2tcpip.h>
 #include "winserial.h"
+#include <stdint.h>
 #pragma comment(lib,"ws2_32.lib") //Winsock Library
 
 #define BUFLEN 512	//Max length of buffer
@@ -33,6 +34,32 @@ also looks like you need to allow the UDP server on the windows firewall or it'l
 */
 
 
+typedef union u32_fmt_t
+{
+	uint32_t u32;
+	int32_t i32;
+	float f32;
+	int16_t i16[sizeof(uint32_t) / sizeof(int16_t)];
+	uint16_t ui16[sizeof(uint32_t) / sizeof(uint16_t)];
+	int8_t i8[sizeof(uint32_t) / sizeof(int8_t)];
+	uint8_t ui8[sizeof(uint32_t) / sizeof(uint8_t)];
+}u32_fmt_t;
+
+
+
+/*
+Generic hex checksum calculation.
+TODO: use this in the psyonic API
+*/
+uint32_t get_checksum32(uint32_t* arr, int size)
+{
+	int32_t checksum = 0;
+	for (int i = 0; i < size; i++)
+		checksum += (int32_t)arr[i];
+	return -checksum;
+}
+
+
 int main()
 {
 	HANDLE usb_serial_port;
@@ -45,7 +72,11 @@ int main()
 	SOCKET s;
 	struct sockaddr_in server, si_other;
 	int slen, recv_len;
+
 	char r_buf[BUFLEN];	//receive buffer
+	u32_fmt_t * fmt_buf;
+	fmt_buf = (u32_fmt_t*)(&r_buf[0]);	//create format structure for byte array that maps to the same memory
+
 	char t_buf[BUFLEN];	//transmit buffer
 	WSADATA wsa;
 
@@ -96,6 +127,7 @@ int main()
 	}
 	puts("Bind done");
 
+	
 	//keep listening for data
 	while (1)
 	{
@@ -111,6 +143,27 @@ int main()
 			printf("recvfrom() failed with error code : %d", WSAGetLastError());
 			//exit(EXIT_FAILURE);
 		}
+
+		int u32_len = recv_len / sizeof(u32_fmt_t);
+		if (get_checksum32((uint32_t*)r_buf, u32_len - 1) == fmt_buf[u32_len - 1].u32)
+		{
+			printf("received: ");
+			for (int i = 0; i < u32_len-1; i++)
+			{
+				printf("%0.4f, ", fmt_buf[i].f32);
+			}
+			printf("\r\n");
+		}
+		else
+		{
+			printf("received %d bytes, checksum mismatch\r\n", recv_len);
+		}
+
+
+
+
+
+
 
 		//forward the shit over usb serial
 		DWORD dwbyteswritten;
