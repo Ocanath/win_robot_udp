@@ -8,13 +8,14 @@
 #include<winsock2.h>
 #include <WS2tcpip.h>
 #include "sin_math.h"
+#include "winudp_server.h"
 
 #pragma comment(lib,"ws2_32.lib") //Winsock Library
 
 #include <iostream>
 
 #define BUFLEN 512	//Max length of buffer
-#define PORT 10103	//The port on which to listen for incoming data
+#define PORT 9145	//The port on which to listen for incoming data
 
 typedef union u32_fmt_t
 {
@@ -44,6 +45,11 @@ uint32_t get_checksum32(uint32_t* arr, int size)
 
 int main(void)
 {
+
+	WinUdpBkstServer udp_server(PORT);
+	udp_server.set_nonblocking();
+
+
 	struct sockaddr_in si_other;
 	int s, slen = sizeof(si_other);
 	char buf[BUFLEN];
@@ -65,9 +71,13 @@ int main(void)
 		printf("socket() failed with error code : %d", WSAGetLastError());
 		exit(EXIT_FAILURE);
 	}
-	DWORD read_timeout_ms = 500;
+	//set to blocking and clear
+	u_long iMode = 1;
+	ioctlsocket(s, FIONBIO, &iMode);
+
+	//DWORD read_timeout_ms = 500;
 	/*set timeout*/
-	setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, (const char *)(&read_timeout_ms), sizeof(read_timeout_ms));
+	//setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, (const char *)(&read_timeout_ms), sizeof(read_timeout_ms));
 
 
 	/*Obtain (a) host ip and display it to the console*/
@@ -86,8 +96,10 @@ int main(void)
 	memset((char*)&si_other, 0, sizeof(si_other));
 	si_other.sin_family = AF_INET;
 	si_other.sin_port = htons(PORT);
+	
 	//si_other.sin_addr.S_un.S_addr = inet_addr(inet_addr_buf); //assign the client the last IP address in the IPV4 list provided by the host name address list lookup. 
-	si_other.sin_addr.S_un.S_addr = inet_addr("192.168.56.255");
+	si_other.sin_addr.S_un.S_addr = inet_addr("192.168.1.199");
+	//si_other.sin_addr = in4addr_any;
 
 	inet_ntop(AF_INET, &si_other.sin_addr.S_un.S_addr, (PSTR)inet_addr_buf, 256);	//convert again the value we copied thru and display
 	printf("Targeting address: %s on port %d\r\n", inet_addr_buf, PORT);
@@ -129,11 +141,17 @@ int main(void)
 			//clear the buffer by filling null, it might have previously received data
 			memset(buf, '\0', BUFLEN);
 			//try to receive some data, this is a blocking call
-			if (recvfrom(s, buf, BUFLEN, 0, (struct sockaddr*)&si_other, &slen) == SOCKET_ERROR)
+			int n_r = recvfrom(s, buf, BUFLEN, 0, (struct sockaddr*)&si_other, &slen);
+			if (n_r == SOCKET_ERROR)
 			{
-				printf("recvfrom() failed with error code : %d. Failcount: %d\r\n", WSAGetLastError(), fail_count);
-				fail_count++;
+				//printf("recvfrom() failed with error code : %d. Failcount: %d\r\n", WSAGetLastError(), fail_count);
+				//fail_count++;
 				//exit(EXIT_FAILURE);
+			}
+			else
+			{
+				buf[n_r] = '\0';
+				printf("got reply: %s\r\n", buf);
 			}
 		}
 	}
