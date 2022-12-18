@@ -45,11 +45,6 @@ uint32_t get_checksum32(uint32_t* arr, int size)
 
 int main(void)
 {
-
-	WinUdpBkstServer udp_server(PORT);
-	udp_server.set_nonblocking();
-
-
 	struct sockaddr_in si_other;
 	int s, slen = sizeof(si_other);
 	char buf[BUFLEN];
@@ -129,7 +124,7 @@ int main(void)
 
 		if(tick > report_ts)
 		{
-			report_ts = tick + 20;	//send udp packet once every 50 milliseconds (or so)
+			report_ts = tick + 0;	//send udp packet once every 50 milliseconds (or so)
 			//send the t_buf
 			const char* p_payload = (const char*)(&farr[0]);
 			if (sendto(s, p_payload, 7*sizeof(u32_fmt_t), 0, (struct sockaddr*)&si_other, slen) == SOCKET_ERROR)
