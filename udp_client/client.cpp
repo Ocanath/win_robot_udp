@@ -14,7 +14,7 @@
 #include <iostream>
 
 #define BUFLEN 512	//Max length of buffer
-#define PORT 10103	//The port on which to listen for incoming data
+#define PORT 50134	//The port on which to listen for incoming data
 
 typedef union u32_fmt_t
 {
@@ -108,8 +108,9 @@ int main(void)
 		/*create a payload*/
 		for (int i = 0; i < 6; i++)
 		{
-			farr[i].f32 = sin_fast(wrap_2pi(t) + (float)i / TWO_PI);	//for later
+			farr[i].f32 = 30.f*(cos_fast(wrap_2pi(t) + (float)i / TWO_PI) + 1);	//for later
 		}
+		farr[5].f32 = -farr[5].f32;
 		farr[6].u32 = get_checksum32( (uint32_t*)(&(farr[0].u32)), 6);
 
 		//sprintf(t_buf, "client uptime: %f\r\n", t);
@@ -129,12 +130,12 @@ int main(void)
 			//clear the buffer by filling null, it might have previously received data
 			memset(buf, '\0', BUFLEN);
 			//try to receive some data, this is a blocking call
-			if (recvfrom(s, buf, BUFLEN, 0, (struct sockaddr*)&si_other, &slen) == SOCKET_ERROR)
-			{
-				printf("recvfrom() failed with error code : %d. Failcount: %d\r\n", WSAGetLastError(), fail_count);
-				fail_count++;
+			//if (recvfrom(s, buf, BUFLEN, 0, (struct sockaddr*)&si_other, &slen) == SOCKET_ERROR)
+			//{
+			//	printf("recvfrom() failed with error code : %d. Failcount: %d\r\n", WSAGetLastError(), fail_count);
+			//	fail_count++;
 				//exit(EXIT_FAILURE);
-			}
+			//}
 		}
 	}
 
