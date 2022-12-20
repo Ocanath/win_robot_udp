@@ -76,7 +76,11 @@ int main()
 	u32_fmt_t * fmt_buf;
 	fmt_buf = (u32_fmt_t*)(&udp_server.r_buf[0]);
 
+	uint64_t start_ts_64 = GetTickCount64();
+	uint32_t trec[1024] = { 0 };
+	int trecidx = 0;
 	//keep listening for data
+	uint32_t prev_tick = 0;
 	while (1)
 	{
 		//printf("Waiting for data...");
@@ -98,12 +102,37 @@ int main()
 			int u32_len = udp_server.recv_len / sizeof(u32_fmt_t);
 			if (get_checksum32((uint32_t*)udp_server.r_buf, u32_len - 1) == fmt_buf[u32_len - 1].u32)
 			{
-				printf("received: ");
-				for (int i = 0; i < u32_len - 1; i++)
+				uint32_t tick = (uint32_t)(GetTickCount64() - start_ts_64);
+				uint32_t tdif = tick - prev_tick;
+				prev_tick = tick;
+
+				//valid msg received and parse.
+				if (trecidx < 1024)
 				{
-					printf("%0.4f, ", fmt_buf[i].f32);
+					trec[trecidx] = tdif;
+					trecidx++;
 				}
-				printf("\r\n");
+				else
+				{
+					trecidx = 0;
+					uint32_t min = 0xFFFFFFFF;
+					uint32_t max = 0;
+					uint64_t sum = 0;
+					for (int i = 0; i < 1024; i++)
+					{
+						sum += (uint64_t)trec[i];
+						if (trec[i] > max)
+							max = trec[i];
+						if (trec[i] < min)
+							min = trec[i];
+					}
+					sum = sum / 1024;
+					printf("min: %u, max: %u, avg: %llu\r\n", min, max, sum);
+				}
+
+
+
+
 			}
 			else
 			{

@@ -14,7 +14,7 @@
 #include <iostream>
 
 #define BUFLEN 512	//Max length of buffer
-#define PORT 50134	//The port on which to listen for incoming data
+#define PORT 10103	//The port on which to listen for incoming data
 
 typedef union u32_fmt_t
 {
@@ -68,7 +68,9 @@ int main(void)
 	DWORD read_timeout_ms = 500;
 	/*set timeout*/
 	setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, (const char *)(&read_timeout_ms), sizeof(read_timeout_ms));
-
+	
+	int  bkst_en = 1;
+	setsockopt(s, SOL_SOCKET, SO_BROADCAST, (const char *)(&bkst_en), sizeof(bkst_en));
 
 	/*Obtain (a) host ip and display it to the console*/
 	char namebuf[256] = { 0 };
@@ -86,12 +88,12 @@ int main(void)
 	memset((char*)&si_other, 0, sizeof(si_other));
 	si_other.sin_family = AF_INET;
 	si_other.sin_port = htons(PORT);
-	//si_other.sin_addr.S_un.S_addr = inet_addr(inet_addr_buf); //assign the client the last IP address in the IPV4 list provided by the host name address list lookup. 
-	si_other.sin_addr.S_un.S_addr = inet_addr("192.168.56.255");
+	si_other.sin_addr.S_un.S_addr = inet_addr(inet_addr_buf); //assign the client the last IP address in the IPV4 list provided by the host name address list lookup. 
+	//si_other.sin_addr.S_un.S_addr = inet_addr("192.168.56.255");
+	//si_other.sin_addr = in4addr_any;
 
 	inet_ntop(AF_INET, &si_other.sin_addr.S_un.S_addr, (PSTR)inet_addr_buf, 256);	//convert again the value we copied thru and display
-	printf("Targeting address: %s on port %d\r\n", inet_addr_buf, PORT);
-
+	printf("Target address: %s on port %d\r\n", inet_addr_buf, PORT);
 
 	//start communication
 	u32_fmt_t farr[40] = { 0 };
@@ -116,9 +118,9 @@ int main(void)
 		//sprintf(t_buf, "client uptime: %f\r\n", t);
 
 
-		if(tick > report_ts)
+		//if(tick > report_ts)
 		{
-			report_ts = tick + 20;	//send udp packet once every 50 milliseconds (or so)
+			report_ts = tick + 0;	//send udp packet once every 50 milliseconds (or so)
 			//send the t_buf
 			const char* p_payload = (const char*)(&farr[0]);
 			if (sendto(s, p_payload, 7*sizeof(u32_fmt_t), 0, (struct sockaddr*)&si_other, slen) == SOCKET_ERROR)
@@ -130,12 +132,12 @@ int main(void)
 			//clear the buffer by filling null, it might have previously received data
 			memset(buf, '\0', BUFLEN);
 			//try to receive some data, this is a blocking call
-			//if (recvfrom(s, buf, BUFLEN, 0, (struct sockaddr*)&si_other, &slen) == SOCKET_ERROR)
-			//{
-			//	printf("recvfrom() failed with error code : %d. Failcount: %d\r\n", WSAGetLastError(), fail_count);
-			//	fail_count++;
-				//exit(EXIT_FAILURE);
-			//}
+			////if (recvfrom(s, buf, BUFLEN, 0, (struct sockaddr*)&si_other, &slen) == SOCKET_ERROR)
+			////{
+			////	printf("recvfrom() failed with error code : %d. Failcount: %d\r\n", WSAGetLastError(), fail_count);
+			////	fail_count++;
+			//	//exit(EXIT_FAILURE);
+			////}
 		}
 	}
 

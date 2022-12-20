@@ -47,6 +47,9 @@ public:
 		}
 		printf("Socket created.\n");
 
+		int  bkst_en = 1;
+		setsockopt(s, SOL_SOCKET, SO_BROADCAST, (const char*)(&bkst_en), sizeof(bkst_en));
+
 		/*obtain and display the host IP address to console before beginning*/
 		char namebuf[256] = { 0 };
 		char inet_addr_buf[256] = { 0 };	/*Buffer to be used for displaying string-format IP addresses*/
