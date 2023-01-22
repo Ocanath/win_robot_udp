@@ -26,5 +26,8 @@
     <ClInclude Include="sin_math.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="WinUdpClient.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

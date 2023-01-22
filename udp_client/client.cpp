@@ -8,13 +8,16 @@
 #include<winsock2.h>
 #include <WS2tcpip.h>
 #include "sin_math.h"
+#include "WinUdpClient.h"
+#include <intrin.h>
+
 
 #pragma comment(lib,"ws2_32.lib") //Winsock Library
 
 #include <iostream>
 
 #define BUFLEN 512	//Max length of buffer
-#define PORT 10103	//The port on which to listen for incoming data
+#define PORT 3145	//The port on which to listen for incoming data
 
 typedef union u32_fmt_t
 {
@@ -41,59 +44,33 @@ uint32_t get_checksum32(uint32_t* arr, int size)
 }
 
 
+/*
+Generic hex checksum calculation.
+TODO: use this in the psyonic API
+*/
+uint32_t fletchers_checksum32(uint32_t* arr, int size)
+{
+	int32_t checksum = 0;
+	int32_t fchk = 0;
+	for (int i = 0; i < size; i++)
+	{
+		checksum += (int32_t)arr[i];
+		fchk += checksum;
+	}
+	return fchk;
+}
+
 
 int main(void)
 {
-	struct sockaddr_in si_other;
-	int s, slen = sizeof(si_other);
-	char buf[BUFLEN];
-	char t_buf[BUFLEN];
-	WSADATA wsa;
+	uint8_t buf[1024];
+	WinUdpClient client(PORT);
+	client.set_nonblocking();
 
-	//Initialise winsock
-	printf("\nInitialising Winsock...");
-	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
-	{
-		printf("Failed. Error Code : %d", WSAGetLastError());
-		exit(EXIT_FAILURE);
-	}
-	printf("Initialised.\n");
-
-	//create socket
-	if ((s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == SOCKET_ERROR)
-	{
-		printf("socket() failed with error code : %d", WSAGetLastError());
-		exit(EXIT_FAILURE);
-	}
-	DWORD read_timeout_ms = 500;
-	/*set timeout*/
-	setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, (const char *)(&read_timeout_ms), sizeof(read_timeout_ms));
-	
-	int  bkst_en = 1;
-	setsockopt(s, SOL_SOCKET, SO_BROADCAST, (const char *)(&bkst_en), sizeof(bkst_en));
-
-	/*Obtain (a) host ip and display it to the console*/
-	char namebuf[256] = { 0 };
+	client.si_other.sin_addr.S_un.S_addr = inet_addr("192.168.1.138");
 	const char inet_addr_buf[256] = { 0 };
-	int rc = gethostname(namebuf, 256);
-	printf("hostname: %s\r\n", namebuf);
-	hostent* phost = gethostbyname(namebuf);
-	for (int i = 0; phost->h_addr_list[i] != NULL; i++)
-	{
-		PCSTR retv = inet_ntop(AF_INET, phost->h_addr_list[i], (PSTR)inet_addr_buf, 256);
-		printf("Host has IP address %d: %s\r\n", i, inet_addr_buf);
-	}
-
-	//setup address structure
-	memset((char*)&si_other, 0, sizeof(si_other));
-	si_other.sin_family = AF_INET;
-	si_other.sin_port = htons(PORT);
-	si_other.sin_addr.S_un.S_addr = inet_addr(inet_addr_buf); //assign the client the last IP address in the IPV4 list provided by the host name address list lookup. 
-	//si_other.sin_addr.S_un.S_addr = inet_addr("192.168.56.255");
-	//si_other.sin_addr = in4addr_any;
-
-	inet_ntop(AF_INET, &si_other.sin_addr.S_un.S_addr, (PSTR)inet_addr_buf, 256);	//convert again the value we copied thru and display
-	printf("Target address: %s on port %d\r\n", inet_addr_buf, PORT);
+	inet_ntop(AF_INET, &client.si_other.sin_addr.S_un.S_addr, (PSTR)inet_addr_buf, 256);	//convert again the value we copied thru and display
+	printf("Target address: %s on port %d\r\n", inet_addr_buf, client.si_other.sin_port);
 
 	//start communication
 	u32_fmt_t farr[40] = { 0 };
@@ -102,6 +79,7 @@ int main(void)
 
 	uint64_t start_tick_64 = GetTickCount64();
 	uint64_t report_ts = 0;
+	uint32_t uptick = 0;
 	while (1)
 	{
 		uint64_t tick = GetTickCount64() - start_tick_64;
@@ -118,30 +96,47 @@ int main(void)
 		//sprintf(t_buf, "client uptime: %f\r\n", t);
 
 
-		//if(tick > report_ts)
+		if(tick > report_ts)
 		{
-			report_ts = tick + 0;	//send udp packet once every 50 milliseconds (or so)
+			report_ts = tick + 1;	//send udp packet once every 50 milliseconds (or so)
 			//send the t_buf
-			const char* p_payload = (const char*)(&farr[0]);
-			if (sendto(s, p_payload, 7*sizeof(u32_fmt_t), 0, (struct sockaddr*)&si_other, slen) == SOCKET_ERROR)
+			//const char* p_payload = (const char*)(&farr[0]);
+			
+			//int len = sprintf((char*)buf, "Fuckin idk tick is %d\r\n", tick);
+			u32_fmt_t sendbuf[5] = { 0 };
+			sendbuf[0].u32 = 0xDEADBEEF;
+			sendbuf[1].u32 = ((uptick++) % 10);
+			sendbuf[2].u32 = 0xF01DCA4D;
+			sendbuf[3].u32 = rand();
+			sendbuf[4].u32 = fletchers_checksum32((uint32_t*)sendbuf, 4);
+			int sendsize = sizeof(sendbuf);
+			if (sendto(client.s, (const char*)sendbuf, sendsize, 0, (struct sockaddr*)&client.si_other, client.slen) != SOCKET_ERROR)
 			{
-				printf("sendto() failed with error code : %d", WSAGetLastError());
-				exit(EXIT_FAILURE);
+				//printf("Successsfully sent message\r\n");
+				//printf("sendto() failed with error code : %d", WSAGetLastError());
+				//exit(EXIT_FAILURE);
 			}
 
 			//clear the buffer by filling null, it might have previously received data
 			memset(buf, '\0', BUFLEN);
-			//try to receive some data, this is a blocking call
-			////if (recvfrom(s, buf, BUFLEN, 0, (struct sockaddr*)&si_other, &slen) == SOCKET_ERROR)
-			////{
-			////	printf("recvfrom() failed with error code : %d. Failcount: %d\r\n", WSAGetLastError(), fail_count);
-			////	fail_count++;
-			//	//exit(EXIT_FAILURE);
-			////}
+			//try to receive some data, this is a blocking call			
+			int recieved_length = recvfrom(client.s, (char*)buf, BUFLEN, 0, (struct sockaddr*)&(client.si_other), &client.slen);
+			if(recieved_length > 0)
+			{
+				if ((recieved_length % 4) == 0)
+				{
+					printf("recieved %d total bytes: ", recieved_length);
+					for (int i = 0; i < recieved_length/4; i++)
+					{
+						printf("0x%.8X ", ((uint32_t*)buf)[i]);
+					}
+					printf("\r\n");
+				}
+			}
 		}
 	}
 
-	closesocket(s);
+	closesocket(client.s);
 	WSACleanup();
 
 	return 0;
