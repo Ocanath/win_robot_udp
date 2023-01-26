@@ -59,7 +59,20 @@ uint32_t fletchers_checksum32(uint32_t* arr, int size)
 	}
 	return fchk;
 }
-
+void ipedit(char* buf)
+{
+	int num_periods = 0;
+	int i;
+	for (i = 0; num_periods < 3; i++)
+	{
+		if (buf[i] == '.')
+			num_periods++;
+	}
+	buf[i] = '2';
+	buf[i + 1] = '5';
+	buf[i + 2] = '5';
+	buf[i + 3] = '\0';
+}
 
 int main(void)
 {
@@ -67,8 +80,21 @@ int main(void)
 	WinUdpClient client(PORT);
 	client.set_nonblocking();
 
-	client.si_other.sin_addr.S_un.S_addr = inet_addr("192.168.29.255");
-	const char inet_addr_buf[256] = { 0 };
+	/*Obtain (a) host ip and display it to the console*/
+	char namebuf[256] = { 0 };
+	char inet_addr_buf[256] = { 0 };
+	int rc = gethostname(namebuf, 256);
+	printf("hostname: %s\r\n", namebuf);
+	hostent* phost = gethostbyname(namebuf);
+	for (int i = 0; phost->h_addr_list[i] != NULL; i++)
+	{
+		PCSTR retv = inet_ntop(AF_INET, phost->h_addr_list[i], (PSTR)inet_addr_buf, 256);
+		printf("Host has IP address %d: %s\r\n", i, inet_addr_buf);
+	}
+	ipedit(inet_addr_buf);
+	printf("Will use broadcast IP %s\r\n", inet_addr_buf);
+	
+	client.si_other.sin_addr.S_un.S_addr = inet_addr(inet_addr_buf);
 	inet_ntop(AF_INET, &client.si_other.sin_addr.S_un.S_addr, (PSTR)inet_addr_buf, 256);	//convert again the value we copied thru and display
 	printf("Target address: %s on port %d\r\n", inet_addr_buf, client.si_other.sin_port);
 

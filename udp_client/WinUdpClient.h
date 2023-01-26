@@ -33,17 +33,6 @@ public:
 			exit(EXIT_FAILURE);
 		}
 
-		/*Obtain (a) host ip and display it to the console*/
-		char namebuf[256] = { 0 };
-		const char inet_addr_buf[256] = { 0 };
-		int rc = gethostname(namebuf, 256);
-		printf("hostname: %s\r\n", namebuf);
-		hostent* phost = gethostbyname(namebuf);
-		for (int i = 0; phost->h_addr_list[i] != NULL; i++)
-		{
-			PCSTR retv = inet_ntop(AF_INET, phost->h_addr_list[i], (PSTR)inet_addr_buf, 256);
-			printf("Host has IP address %d: %s\r\n", i, inet_addr_buf);
-		}
 
 		memset((char*)&si_us, 0, sizeof(si_us));
 		si_us.sin_family = AF_INET;
@@ -57,7 +46,8 @@ public:
 		si_other.sin_addr.S_un.S_addr = inet_addr("127.0.0.0");
 		//si_other.sin_addr.S_un.S_addr = inet_addr("98.148.246.163");
 		//si_other.sin_addr = in4addr_any;
-
+		
+		const char inet_addr_buf[256] = { 0 };
 		inet_ntop(AF_INET, &si_other.sin_addr.S_un.S_addr, (PSTR)inet_addr_buf, 256);	//convert again the value we copied thru and display
 		//printf("Target address: %s on port %d\r\n", inet_addr_buf, port);
 
