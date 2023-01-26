@@ -67,7 +67,7 @@ int main(void)
 	WinUdpClient client(PORT);
 	client.set_nonblocking();
 
-	client.si_other.sin_addr.S_un.S_addr = inet_addr("192.168.1.138");
+	client.si_other.sin_addr.S_un.S_addr = inet_addr("192.168.29.255");
 	const char inet_addr_buf[256] = { 0 };
 	inet_ntop(AF_INET, &client.si_other.sin_addr.S_un.S_addr, (PSTR)inet_addr_buf, 256);	//convert again the value we copied thru and display
 	printf("Target address: %s on port %d\r\n", inet_addr_buf, client.si_other.sin_port);
@@ -80,6 +80,15 @@ int main(void)
 	uint64_t start_tick_64 = GetTickCount64();
 	uint64_t report_ts = 0;
 	uint32_t uptick = 0;
+
+	const char* sendbuf = "hello";
+	if (sendto(client.s, sendbuf, strlen(sendbuf), 0, (struct sockaddr*)&client.si_other, client.slen) != SOCKET_ERROR)
+	{
+		//printf("Successsfully sent message\r\n");
+		//printf("sendto() failed with error code : %d", WSAGetLastError());
+		//exit(EXIT_FAILURE);
+	}
+
 	while (1)
 	{
 		uint64_t tick = GetTickCount64() - start_tick_64;
@@ -96,44 +105,31 @@ int main(void)
 		//sprintf(t_buf, "client uptime: %f\r\n", t);
 
 
+		//blindly attempt sending hello to our server so if it restarts it can find us
 		if(tick > report_ts)
 		{
-			report_ts = tick + 1;	//send udp packet once every 50 milliseconds (or so)
-			//send the t_buf
-			//const char* p_payload = (const char*)(&farr[0]);
-			
-			//int len = sprintf((char*)buf, "Fuckin idk tick is %d\r\n", tick);
-			u32_fmt_t sendbuf[5] = { 0 };
-			sendbuf[0].u32 = 0xDEADBEEF;
-			sendbuf[1].u32 = ((uptick++) % 10);
-			sendbuf[2].u32 = 0xF01DCA4D;
-			sendbuf[3].u32 = rand();
-			sendbuf[4].u32 = fletchers_checksum32((uint32_t*)sendbuf, 4);
-			int sendsize = sizeof(sendbuf);
-			if (sendto(client.s, (const char*)sendbuf, sendsize, 0, (struct sockaddr*)&client.si_other, client.slen) != SOCKET_ERROR)
+			report_ts = tick + 750;	//send udp packet once every 50 milliseconds (or so)
+			sendto(client.s, sendbuf, strlen(sendbuf), 0, (struct sockaddr*)&client.si_other, client.slen);
+		}
+		
+		//clear the buffer by filling null, it might have previously received data
+		memset(buf, '\0', BUFLEN);
+		//try to receive some data, this is a blocking call			
+		int recieved_length = recvfrom(client.s, (char*)buf, BUFLEN, 0, (struct sockaddr*)&(client.si_other), &client.slen);
+		if(recieved_length > 0)
+		{
+			if ((recieved_length % 4) == 0)
 			{
-				//printf("Successsfully sent message\r\n");
-				//printf("sendto() failed with error code : %d", WSAGetLastError());
-				//exit(EXIT_FAILURE);
-			}
-
-			//clear the buffer by filling null, it might have previously received data
-			memset(buf, '\0', BUFLEN);
-			//try to receive some data, this is a blocking call			
-			int recieved_length = recvfrom(client.s, (char*)buf, BUFLEN, 0, (struct sockaddr*)&(client.si_other), &client.slen);
-			if(recieved_length > 0)
-			{
-				if ((recieved_length % 4) == 0)
+				printf("recieved %d total bytes: ", recieved_length);
+				for (int i = 0; i < recieved_length/4; i++)
 				{
-					printf("recieved %d total bytes: ", recieved_length);
-					for (int i = 0; i < recieved_length/4; i++)
-					{
-						printf("0x%.8X ", ((uint32_t*)buf)[i]);
-					}
-					printf("\r\n");
+					//printf("0x%.8X ", ((int32_t*)buf)[i]);
+					printf("%d ", ((int32_t*)buf)[i]);
 				}
+				printf("\r\n");
 			}
 		}
+		
 	}
 
 	closesocket(client.s);
