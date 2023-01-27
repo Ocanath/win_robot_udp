@@ -19,17 +19,6 @@
 #define BUFLEN 512	//Max length of buffer
 #define PORT 3145	//The port on which to listen for incoming data
 
-typedef union u32_fmt_t
-{
-	uint32_t u32;
-	int32_t i32;
-	float f32;
-	int16_t i16[sizeof(uint32_t) / sizeof(int16_t)];
-	uint16_t ui16[sizeof(uint32_t) / sizeof(uint16_t)];
-	int8_t i8[sizeof(uint32_t) / sizeof(int8_t)];
-	uint8_t ui8[sizeof(uint32_t) / sizeof(uint8_t)];
-}u32_fmt_t;
-
 
 /*
 Generic hex checksum calculation.
@@ -59,6 +48,7 @@ uint32_t fletchers_checksum32(uint32_t* arr, int size)
 	}
 	return fchk;
 }
+
 void ipedit(char* buf)
 {
 	int num_periods = 0;
@@ -74,27 +64,15 @@ void ipedit(char* buf)
 	buf[i + 3] = '\0';
 }
 
+
 int main(void)
 {
 	uint8_t buf[1024];
 	WinUdpClient client(PORT);
 	client.set_nonblocking();
-
-	/*Obtain (a) host ip and display it to the console*/
-	char namebuf[256] = { 0 };
-	char inet_addr_buf[256] = { 0 };
-	int rc = gethostname(namebuf, 256);
-	printf("hostname: %s\r\n", namebuf);
-	hostent* phost = gethostbyname(namebuf);
-	for (int i = 0; phost->h_addr_list[i] != NULL; i++)
-	{
-		PCSTR retv = inet_ntop(AF_INET, phost->h_addr_list[i], (PSTR)inet_addr_buf, 256);
-		printf("Host has IP address %d: %s\r\n", i, inet_addr_buf);
-	}
-	ipedit(inet_addr_buf);
-	printf("Will use broadcast IP %s\r\n", inet_addr_buf);
 	
-	client.si_other.sin_addr.S_un.S_addr = inet_addr(inet_addr_buf);
+	char inet_addr_buf[256] = { 0 };
+	client.si_other.sin_addr.S_un.S_addr = client.get_bkst_ip();
 	inet_ntop(AF_INET, &client.si_other.sin_addr.S_un.S_addr, (PSTR)inet_addr_buf, 256);	//convert again the value we copied thru and display
 	printf("Target address: %s on port %d\r\n", inet_addr_buf, client.si_other.sin_port);
 

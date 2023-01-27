@@ -6,6 +6,18 @@
 #include <WS2tcpip.h>
 #include <stdint.h>
 
+typedef union u32_fmt_t
+{
+	uint32_t u32;
+	int32_t i32;
+	float f32;
+	int16_t i16[sizeof(uint32_t) / sizeof(int16_t)];
+	uint16_t ui16[sizeof(uint32_t) / sizeof(uint16_t)];
+	int8_t i8[sizeof(uint32_t) / sizeof(int8_t)];
+	uint8_t ui8[sizeof(uint32_t) / sizeof(uint8_t)];
+}u32_fmt_t;
+
+
 
 class WinUdpClient
 {
@@ -58,7 +70,26 @@ public:
 		u_long iMode = 1;
 		return ioctlsocket(s, FIONBIO, &iMode);
 	}
+	ULONG get_bkst_ip(void)
+	{
+		char namebuf[256] = { 0 };
+		int rc = gethostname(namebuf, 256);
+		printf("hostname: %s\r\n", namebuf);
+		hostent* phost = gethostbyname(namebuf);
+		struct in_addr address;
+		u32_fmt_t fmt;
+		for (int i = 0; phost->h_addr_list[i] != NULL; i++)
+		{
+			memcpy(&address, phost->h_addr_list[i], sizeof(struct in_addr));
 
+			fmt.u32 = (uint32_t)(address.S_un.S_addr);
+			printf("Host IP: %d.%d.%d.%d\r\n", fmt.ui8[0], fmt.ui8[1], fmt.ui8[2], fmt.ui8[3]);
+		}
+		fmt.ui8[3] = 0xFF;
+		printf("Will use IP: %d.%d.%d.%d\r\n", fmt.ui8[0], fmt.ui8[1], fmt.ui8[2], fmt.ui8[3]);
+
+		return fmt.u32;
+	}
 	~WinUdpClient()
 	{
 
